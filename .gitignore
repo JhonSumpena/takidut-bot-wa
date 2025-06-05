@@ -2,5 +2,7 @@ node_modules/
 notes.txt
 WWebJS
 .wwebjs_auth
+.wwebjs_cache
 .env
 build/
+.gitignore

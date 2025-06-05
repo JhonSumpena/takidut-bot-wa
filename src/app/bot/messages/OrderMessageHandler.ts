@@ -21,7 +21,7 @@ export const OrderMessageHandler = {
       location: {},
     });
 
-    await OrderHandlerCache.setOder('order:' + msg.from, data);
+    await OrderHandlerCache.setOrder('order:' + msg.from, data);
 
     return msg.reply(
       `✅ Pesanan Anda telah diterima dengan sukses.
@@ -44,7 +44,7 @@ export const OrderMessageHandler = {
     if (!obj) return false;
 
     obj.status = status;
-    await OrderHandlerCache.setOder('order:' + msg.from, JSON.stringify(obj));
+    await OrderHandlerCache.setOrder('order:' + msg.from, JSON.stringify(obj));
     return true;
   },
 
@@ -120,7 +120,7 @@ export const OrderMessageHandler = {
     obj.delivery_method = metode_pengiriman;
     obj.status = status;
 
-    await OrderHandlerCache.setOder('order:' + msg.from, JSON.stringify(obj));
+    await OrderHandlerCache.setOrder('order:' + msg.from, JSON.stringify(obj));
     return true;
   },
 };

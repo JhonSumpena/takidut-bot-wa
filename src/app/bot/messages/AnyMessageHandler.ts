@@ -1,8 +1,4 @@
 import type { Message } from 'whatsapp-web.js';
-import { AddProductCommandHandler } from './commands/AddProductCommandHandler';
-import { CheckStockCommandHandler } from './commands/CheckStockCommandHandler';
-import { ListProductCommandHandler } from './commands/ListProductCommandHandler';
-import { UpdateProductCommandHandler } from './commands/UpdateProductCommandHandler';
 import { DeleteProductCommandHandler } from './commands/DeleteProductCommandHandler';
 
 import HelperStr from '../utils/HelperStr';
@@ -110,25 +106,6 @@ export const AnyMessageHandler = {
           case 'selesai': // Updated from 'finalizado'
             console.log('✅ Mengirim pesan: pesanan selesai');
             return msg.reply(finished_order_message);
-          
-          case 'tambahproduk': 
-            console.log('✅ Menambah Produk');
-            return AddProductCommandHandler.execute(msg);
-          
-          case 'cekstok': 
-            console.log('⏳ Check Stok Barang');
-            return CheckStockCommandHandler.execute(msg);
-          case 'listproduk': 
-            console.log('📋 List semua produk');
-            return ListProductCommandHandler.execute(msg);
-            
-          case 'updateproduk': 
-            console.log('✏️ Update produk');
-            return UpdateProductCommandHandler.execute(msg);
-            
-          case 'hapusproduk': 
-            console.log('🗑️ Hapus produk');
-            return DeleteProductCommandHandler.execute(msg);
           
             
           default:
