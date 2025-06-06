@@ -49,7 +49,7 @@ export const AnyMessageHandler = {
       const body_upper = msg.body.toUpperCase().trim();
         if (body_upper.startsWith('HAPUS ')) {
           const kode = body_upper.split(' ')[1];
-          if (kode && HelperCommands.checkIfIsAdmin(msg.from)) {
+          if (kode && await HelperCommands.checkIfIsAdmin(msg.from)) {
             console.log('🗑️ Konfirmasi hapus produk:', kode);
             return DeleteProductCommandHandler.confirmDelete(msg, kode);
           }
@@ -63,7 +63,7 @@ export const AnyMessageHandler = {
         
         // Update switch case ke bahasa Indonesia sesuai dengan MessageHandler
         switch (order_status) {
-          case 'created':
+          case 'buat':
             console.log('✅ Mengirim pesan status: pesanan dibuat');
             return msg.reply(created_status_message);
             

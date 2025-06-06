@@ -10,7 +10,7 @@ class MessageDispatcher {
 
   async dispatch(name: string, message: any) {
     for (const [key, _] of this.messageHandlers) {
-      if (name.includes(key)) {
+      if (name === key) {
         if (!this.messageHandlers.has(key)) {
           return;
         }

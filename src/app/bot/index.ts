@@ -33,6 +33,7 @@ import { CheckStockCommandHandler } from './messages/commands/CheckStockCommandH
 import { ListProductCommandHandler } from './messages/commands/ListProductCommandHandler';
 import { UpdateProductCommandHandler } from './messages/commands/UpdateProductCommandHandler';
 import { DeleteProductCommandHandler } from './messages/commands/DeleteProductCommandHandler';
+import { HelperCommands } from './utils/HelperCommands';
 
 // Register handlers once when module loads
 const initializeHandlers = (): void => {
@@ -114,14 +115,24 @@ export const MessageHandler = async (message: Message): Promise<void> => {
     // Determine dispatch name based on message context
     if (isCommand) {
       // Handle commands (messages starting with #)
-      dispatchName = message.body.slice(1);
+      dispatchName = message.body.slice(1).split(' ')[0].toLowerCase();
       console.log('🔧 Memproses perintah:', dispatchName);
+    }
+    else if (
+      !(await HelperCommands.checkIfIsAdmin(message.from)) && // ⬅️ Lewati jika admin
+      !(await OrderMessageHandler.CheckExistsOrderToUser(message)) &&
+      !isOrder
+    ) {
+      console.log(`⚠️ Data order kosong di Redis untuk: ${message.from}`);
+      await message.reply('⚠️ Anda belum memiliki pesanan yang aktif. Silakan buat pesanan terlebih dahulu.');
+      return;
     } else if (await OrderMessageHandler.CheckExistsOrderToUser(message) && !isOrder) {
       // Handle order status flow
       const orderStatus = await OrderMessageHandler.getStatusOrder(message);
       dispatchName = orderStatus;
       console.log('📋 Memproses status pesanan:', dispatchName);
-    } else {
+    }
+ else {
       // Handle regular messages or new orders
       dispatchName = message.type;
       console.log('💬 Memproses tipe pesan:', dispatchName);

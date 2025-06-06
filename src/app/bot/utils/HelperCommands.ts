@@ -6,18 +6,17 @@ import { UpdateOrder } from '../../usecases/update-order';
 dotenv.config();
 
 export const HelperCommands = {
-  checkIfIsAdmin(message_from: string): boolean {
-    if (process.env.ADMINS != null) {
-      const admins = process.env.ADMINS.split(',');
+  async checkIfIsAdmin(message_from: string): Promise<boolean> {
+      if (process.env.ADMINS != null) {
+        const admins = process.env.ADMINS.split(',');
 
-      if (admins.indexOf(message_from) > -1) {
-        //console.log(`Admin: ${admins}`);
-        return true;
+        if (admins.includes(message_from)) {
+          return true;
+        }
       }
-    }
 
-    return false;
-  },
+      return false;
+    },
   async updateOrderStatusAndNotify(
     order_id: number,
     status_to_update: string,
