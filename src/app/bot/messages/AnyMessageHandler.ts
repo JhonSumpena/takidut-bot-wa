@@ -23,108 +23,69 @@ import OrderHandlerCache from '../cache/OrderHandlerCache';
 import { HelperCommands } from '../utils/HelperCommands';
 
 export const AnyMessageHandler = {
-  async execute(msg: Message): Promise<Message> {
+  async execute(msg: Message): Promise<Message | void> {
     try {
-      // Skip jika sedang dalam mode atendimento
       if (await OrderHandlerCache.checkIfIsAtendimento(msg)) {
         console.log('🔄 User sedang dalam mode atendimento, melewati AnyMessageHandler');
-        return msg;
+        return;
       }
 
       const chat = await msg.getChat();
       await chat.sendStateTyping();
 
-      const splited_message_body = HelperStr.formatMessageToCheck(msg.body).split(' ');
+      const formatted = HelperStr.formatMessageToCheck(msg.body);
+      const foundGreeting = greeting_messages.some(g => formatted.includes(g));
+      const hasOrder = await OrderMessageHandler.CheckExistsOrderToUser(msg);
 
-      // Cek apakah pesan adalah greeting
-      const found = greeting_messages.some(
-        (r) => splited_message_body.indexOf(r) >= 0,
-      );
-      
-      if (found) {
-        console.log('👋 Mengirim pesan greeting kepada user');
+      // 1. Greeting dan belum punya order → kirim sapaan
+      if (foundGreeting && !hasOrder) {
+        console.log('👋 Greeting dan user tidak punya order -> kirim greeting');
         return msg.reply(greeting_message_to_reply);
       }
 
-      const body_upper = msg.body.toUpperCase().trim();
-        if (body_upper.startsWith('HAPUS ')) {
-          const kode = body_upper.split(' ')[1];
-          if (kode && await HelperCommands.checkIfIsAdmin(msg.from)) {
-            console.log('🗑️ Konfirmasi hapus produk:', kode);
-            return DeleteProductCommandHandler.confirmDelete(msg, kode);
-          }
-        }
-
-      // Cek apakah user memiliki pesanan aktif
-      if (await OrderMessageHandler.CheckExistsOrderToUser(msg)) {
-        const order_status = await OrderMessageHandler.getStatusOrder(msg);
-
-        console.log('📋 Status pesanan user:', order_status);
-        
-        // Update switch case ke bahasa Indonesia sesuai dengan MessageHandler
-        switch (order_status) {
-          case 'buat':
-            console.log('✅ Mengirim pesan status: pesanan dibuat');
-            return msg.reply(created_status_message);
-            
-          case 'konfirmasi-data': // Updated from 'confirma-dados'
-            console.log('📝 Mengirim pesan: konfirmasi data');
-            return msg.reply(confirm_data_status);
-            
-          case 'data-alamat': // Updated from 'endereco-dados'
-            console.log('📍 Mengirim pesan: konfirmasi alamat');
-            return msg.reply(confirm_address_data);
-            
-          case 'biaya-ongkir': // Updated from 'taxa-entrega'
-            console.log('💰 Mengirim pesan: konfirmasi biaya ongkir');
-            return msg.reply(confirm_bairro_data);
-            
-          case 'data-pengiriman': // Updated from 'entrega-dados'
-            console.log('🚚 Mengirim pesan: konfirmasi data pengiriman');
-            return msg.reply(confirm_delivery_data);
-            
-          case 'data-pembayaran': // Updated from 'pagamento-dados'
-            console.log('💳 Mengirim pesan: konfirmasi data pembayaran');
-            return msg.reply(confirm_payment_data);
-            
-          case 'pix-pending': // Keep same (specific payment system)
-            console.log('⏳ Mengirim pesan: pembayaran PIX pending');
-            return msg.reply(payment_required_message);
-            
-          case 'produksi': // Updated from 'producao'
-            console.log('🏭 Mengirim pesan: status produksi');
-            return msg.reply(production_status_message);
-            
-          case 'pengiriman': // Updated from 'entrega'
-            console.log('📦 Mengirim pesan: status pengiriman');
-            return msg.reply(entrega_status_message);
-            
-          case 'ambil-sendiri': // Updated from 'retirada'
-            console.log('🏪 Mengirim pesan: status ambil sendiri');
-            return msg.reply(retirada_status_message);
-            
-          case 'selesai': // Updated from 'finalizado'
-            console.log('✅ Mengirim pesan: pesanan selesai');
-            return msg.reply(finished_order_message);
-          
-            
-          default:
-            console.log('❓ Status pesanan tidak dikenali:', order_status);
-            return msg.reply(last_option_message);
+      // 2. Admin command: HAPUS <KODE>
+      const bodyUpper = msg.body.toUpperCase().trim();
+      if (bodyUpper.startsWith('HAPUS ')) {
+        const kode = bodyUpper.split(' ')[1];
+        if (kode && (await HelperCommands.checkIfIsAdmin(msg.from))) {
+          console.log('🗑️ Konfirmasi hapus produk:', kode);
+          return DeleteProductCommandHandler.confirmDelete(msg, kode);
         }
       }
 
-      console.log('💬 Mengirim pesan default/bantuan');
-      return msg.reply(last_option_message);
-      
+      // 3. User punya order → kirim respon berdasarkan status
+      if (hasOrder) {
+        const order_status = await OrderMessageHandler.getStatusOrder(msg);
+        console.log('📋 Status pesanan user:', order_status);
+
+        const statusResponses: Record<string, string> = {
+          'buat': created_status_message,
+          'konfirmasi-data': confirm_data_status,
+          'data-alamat': confirm_address_data,
+          'biaya-ongkir': confirm_bairro_data,
+          'data-pengiriman': confirm_delivery_data,
+          'data-pembayaran': confirm_payment_data,
+          'pix-pending': payment_required_message,
+          'produksi': production_status_message,
+          'pengiriman': entrega_status_message,
+          'ambil-sendiri': retirada_status_message,
+          'selesai': finished_order_message,
+        };
+
+        return msg.reply(statusResponses[order_status] || last_option_message);
+      }
+
+      // 4. Bukan greeting & tidak ada order → tidak dibalas
+      console.log('📭 Chat biasa, bukan greeting, dan user belum punya order → tidak dibalas');
+      return;
+
     } catch (error) {
       console.error('❌ Error di AnyMessageHandler:', error);
-      
       try {
-        return msg.reply('❌ Maaf, terjadi kesalahan saat memproses pesan Anda. Silakan coba lagi atau ketik #bantuan untuk mendapat bantuan.');
+        return msg.reply('❌ Maaf, terjadi kesalahan saat memproses pesan Anda. Silakan coba lagi atau ketik #bantuan.');
       } catch (replyError) {
         console.error('❌ Error saat mengirim pesan error:', replyError);
-        return msg;
+        return;
       }
     }
   },

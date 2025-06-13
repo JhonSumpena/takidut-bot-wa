@@ -4,6 +4,13 @@ import { HelperCommands } from '../../utils/HelperCommands';
 
 export const CheckStockCommandHandler = {
   async execute(msg: Message): Promise<Message> {
+
+    // Izinkan hanya admin atau user yang punya order
+    const isAdmin = await HelperCommands.checkIfIsAdmin(msg.from);
+    if (!isAdmin) {
+      return msg.reply('❌ Anda tidak memiliki akses untuk mengecek stok. Fitur ini hanya untuk admin.');
+    }
+    
     const body = msg.body.trim();
     const args = body.split(' ');
 
@@ -14,12 +21,6 @@ export const CheckStockCommandHandler = {
     }
 
     const kode_barang = args[1];
-
-    // Izinkan hanya admin atau user yang punya order
-    const isAdmin = await HelperCommands.checkIfIsAdmin(msg.from);
-    if (!isAdmin) {
-      return msg.reply('❌ Anda tidak memiliki akses untuk mengecek stok. Fitur ini hanya untuk admin.');
-    }
 
     const product = await queryProduct.getProductByCode(kode_barang);
 

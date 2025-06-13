@@ -49,7 +49,7 @@ client.on('message', async (message) => {
       waktu: new Date().toLocaleTimeString('id-ID')
     });
 
-    await MessageHandler(message);
+    await MessageHandler(message, client);
   }
 });
 

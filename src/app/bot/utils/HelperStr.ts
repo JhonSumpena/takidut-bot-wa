@@ -5,14 +5,14 @@ export default class HelperStr {
    * @returns String yang sudah dinormalisasi tanpa aksen dan tanda koma
    */
   static formatMessageToCheck(message_body: string): string {
-    const msg_body_tanpa_aksen = message_body
-      .normalize('NFD')                    // Normalisasi Unicode untuk memisahkan karakter dasar dan aksen
-      .replace(/[\u0300-\u036f]/g, '')    // Hapus semua karakter aksen/diakritik
-      .replace(/,/g, '')                  // Hapus tanda koma
-      .toLowerCase();                     // Ubah ke huruf kecil
-
-    return msg_body_tanpa_aksen;
-  }
+  return message_body
+    .normalize('NFD')                         // Normalisasi Unicode
+    .replace(/[\u0300-\u036f]/g, '')         // Hapus aksen
+    .replace(/[^\w\s]|_/g, '')               // Hapus semua tanda baca dan simbol
+    .replace(/\s+/g, ' ')                    // Gabungkan spasi berlebih
+    .trim()                                  // Hapus spasi di awal/akhir
+    .toLowerCase();                          // Ubah ke lowercase
+}
 
   /**
    * Format pesan dengan membersihkan karakter khusus dan spasi berlebih

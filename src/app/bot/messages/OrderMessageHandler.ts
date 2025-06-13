@@ -4,7 +4,7 @@ import OrderHandlerCache from '../cache/OrderHandlerCache';
 import { redisClient } from '../../../services/redis';
 
 export const OrderMessageHandler = {
-  async execute(msg: Message): Promise<Message> {
+  async execute(msg: Message, _client?: any): Promise<Message> {
     const chat = await msg.getChat();
     await chat.sendStateTyping();
 
@@ -123,4 +123,34 @@ export const OrderMessageHandler = {
     await OrderHandlerCache.setOrder('order:' + msg.from, JSON.stringify(obj));
     return true;
   },
+  async createCacheOrder({
+  total,
+  items,
+  name,
+  contact_number,
+  chatId,
+  location,
+}: {
+  total: number;
+  items: any[];
+  name: string;
+  contact_number: string;
+  chatId: string;
+  location: any;
+}) {
+  return {
+    total,
+    items,
+    name,
+    contact_number,
+    chatId,
+    location,
+    status: 'konfirmasi-data',
+    created_at: new Date(),
+  };
+},
+
+async saveOrderCache(key: string, data: any) {
+  return OrderHandlerCache.setOrder('order:' + key, data);
+},
 };

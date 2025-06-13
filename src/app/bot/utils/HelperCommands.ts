@@ -7,16 +7,20 @@ dotenv.config();
 
 export const HelperCommands = {
   async checkIfIsAdmin(message_from: string): Promise<boolean> {
-      if (process.env.ADMINS != null) {
-        const admins = process.env.ADMINS.split(',');
+  if (process.env.ADMINS != null) {
+    const admins = process.env.ADMINS.split(',').map(admin => admin.trim());
+    
+    // Debug logging (hapus setelah fix)
+    console.log('Checking admin access:');
+    console.log('User ID:', message_from);
+    console.log('Admin list:', admins);
+    console.log('Is admin?', admins.includes(message_from));
+    
+    return admins.includes(message_from);
+  }
 
-        if (admins.includes(message_from)) {
-          return true;
-        }
-      }
-
-      return false;
-    },
+  return false;
+},
   async updateOrderStatusAndNotify(
     order_id: number,
     status_to_update: string,

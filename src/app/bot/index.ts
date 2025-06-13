@@ -28,12 +28,12 @@ import { LoadOrdersFromDbToGroup } from './messages/commands/LoadOrdersFromDbToG
 import { UpdatePaymentStatusCommand } from './messages/commands/UpdatePaymentStatusCommand';
 import { CreatePaymentPixCommand } from './messages/commands/CreatePaymentPixCommand';
 
+import { CreateOrderByCodeCommandHandler } from './messages/commands/CreateOrderByCodeCommandHandler';
 import { AddProductCommandHandler } from './messages/commands/AddProductCommandHandler';
 import { CheckStockCommandHandler } from './messages/commands/CheckStockCommandHandler';
 import { ListProductCommandHandler } from './messages/commands/ListProductCommandHandler';
 import { UpdateProductCommandHandler } from './messages/commands/UpdateProductCommandHandler';
 import { DeleteProductCommandHandler } from './messages/commands/DeleteProductCommandHandler';
-import { HelperCommands } from './utils/HelperCommands';
 
 // Register handlers once when module loads
 const initializeHandlers = (): void => {
@@ -70,6 +70,7 @@ const initializeHandlers = (): void => {
     messageDispatcher.register('ambil-sendiri', RetiradaOrderStatusHandler);    // retirada -> ambil-sendiri
     messageDispatcher.register('selesai', OrderFinishedStatusHandler);          // finalizado -> selesai
      // produk
+    messageDispatcher.register('pesan', CreateOrderByCodeCommandHandler);
     messageDispatcher.register('tambahproduk', AddProductCommandHandler);
     messageDispatcher.register('cekstok', CheckStockCommandHandler);
     messageDispatcher.register('listproduk', ListProductCommandHandler);
@@ -85,75 +86,58 @@ const initializeHandlers = (): void => {
 // Initialize handlers once
 initializeHandlers();
 
-export const MessageHandler = async (message: Message): Promise<void> => {
+/* ----- registrasi handler tetap sama (initializeHandlers) ----- */
+
+export const MessageHandler = async (message: Message, client: any): Promise<void> => {
   try {
-    console.log('📨 Pesan diterima:', {
-      from: message.from,
-      type: message.type,
-      body: message.body?.substring(0, 100) + (message.body?.length > 100 ? '...' : ''),
-      fromMe: message.fromMe
-    });
+    /* ---------- logging awal ---------- */
+    if (message.fromMe) return;          // abaikan pesan dari bot sendiri
 
-    console.log('🔍 Debug isi pesan:', {
-      body: message.body,
-      type: message.type,
-      fromMe: message.fromMe,
-    });
+    const isOrder   = message.type === 'order';
+    const isCommand = message.body?.startsWith('#') ?? false;
+    const command   = isCommand
+      ? message.body.slice(1).split(' ')[0].toLowerCase()
+      : '';
 
-    // Skip messages from bot itself
-    if (message.fromMe) {
-      console.log('⏭️ Melewati pesan dari bot');
-      return;
-    }
-
-    let dispatchName = '';
-    const isOrder = message.type === 'order';
-    const isCommand = message.body?.startsWith('#');
-    console.log('🔍 isOrder:', isOrder, 'isCommand:', isCommand);
-
-
-    // Determine dispatch name based on message context
+    /* ---------- 1) command  ---------- */
     if (isCommand) {
-      // Handle commands (messages starting with #)
-      dispatchName = message.body.slice(1).split(' ')[0].toLowerCase();
-      console.log('🔧 Memproses perintah:', dispatchName);
-    }
-    else if (
-      !(await HelperCommands.checkIfIsAdmin(message.from)) && // ⬅️ Lewati jika admin
-      !(await OrderMessageHandler.CheckExistsOrderToUser(message)) &&
-      !isOrder
-    ) {
-      console.log(`⚠️ Data order kosong di Redis untuk: ${message.from}`);
-      await message.reply('⚠️ Anda belum memiliki pesanan yang aktif. Silakan buat pesanan terlebih dahulu.');
+      // Daftar command yang memerlukan order aktif
+      const commandNeedsOrder = [
+        'ok', 'lihat', 'update', 'bayar', 'batal', 
+        'selesai', 'konfirmasi-data', 'data-alamat',
+        'biaya-ongkir', 'data-pengiriman', 'data-pembayaran',
+        'pix-pending', 'produksi', 'pengiriman', 'ambil-sendiri'
+      ];
+
+      // Jika command membutuhkan order tapi order belum ada → beri tahu user
+      if (commandNeedsOrder.includes(command)) {
+        const hasOrder = await OrderMessageHandler.CheckExistsOrderToUser(message);
+        if (!hasOrder) {
+          await message.reply('⚠️ Anda belum memiliki pesanan yang aktif. ' +
+                            'Kirim keranjang atau ketik *#pesan* untuk membuat pesanan baru.');
+          return;
+        }
+      }
+
+      // Semua command lainnya akan langsung diproses tanpa perlu cek order
+      console.log('🔧 Memproses perintah:', command);
+      await messageDispatcher.dispatch(command, message, client);
       return;
-    } else if (await OrderMessageHandler.CheckExistsOrderToUser(message) && !isOrder) {
-      // Handle order status flow
-      const orderStatus = await OrderMessageHandler.getStatusOrder(message);
-      dispatchName = orderStatus;
-      console.log('📋 Memproses status pesanan:', dispatchName);
-    }
- else {
-      // Handle regular messages or new orders
-      dispatchName = message.type;
-      console.log('💬 Memproses tipe pesan:', dispatchName);
     }
 
-    // Dispatch message to appropriate handler
-    if (dispatchName) {
-      console.log('🚀 Mengirim ke handler:', dispatchName);
-      await messageDispatcher.dispatch(dispatchName, message);
-    } else {
-      console.log('⚠️ Tidak ada nama dispatch yang ditentukan untuk pesan ini');
+    /* ---------- 2) pesan ORDER dari katalog ---------- */
+    if (isOrder) {
+      await messageDispatcher.dispatch('order', message, client);
+      return;
     }
+
+    /* ---------- 3) pesan chat biasa ---------- */
+    await messageDispatcher.dispatch('chat', message, client);
 
   } catch (error) {
     console.error('❌ Error di MessageHandler:', error);
-    
-    // Opsional: Kirim pesan error ke user
     try {
       await message.reply('❌ Maaf, terjadi kesalahan saat memproses pesan Anda. Silakan coba lagi.');
-    } catch (replyError) {
-      console.error('❌ Error saat mengirim balasan error:', replyError);
-    }
+    } catch { /* diam */ }
   }
 };

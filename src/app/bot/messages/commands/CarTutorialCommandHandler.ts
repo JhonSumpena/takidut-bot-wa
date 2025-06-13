@@ -14,7 +14,7 @@ export const CarTutorialCommandHandler = {
     );
 
     // Tunggu beberapa detik jika ingin efek jeda natural (opsional)
-     await new Promise(res => setTimeout(res, 2000));
+     await new Promise(res => setTimeout(res, 5000));
 
     return chat.sendMessage(media);
   },

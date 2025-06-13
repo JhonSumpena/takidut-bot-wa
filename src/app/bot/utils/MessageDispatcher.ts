@@ -8,7 +8,7 @@ class MessageDispatcher {
     this.messageHandlers.set(name, command);
   }
 
-  async dispatch(name: string, message: any) {
+  async dispatch(name: string, message: any, client?: any) {
     for (const [key, _] of this.messageHandlers) {
       if (name === key) {
         if (!this.messageHandlers.has(key)) {
@@ -16,7 +16,11 @@ class MessageDispatcher {
         }
 
         const message_type = this.messageHandlers.get(key) ?? AnyMessageHandler;
-        await message_type.execute(message);
+        if (client !== undefined) {
+          await message_type.execute(message, client);
+        } else {
+          await message_type.execute(message);
+        }
       }
     }
   }
